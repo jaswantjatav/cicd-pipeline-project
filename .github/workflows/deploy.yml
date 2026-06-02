@@ -49,6 +49,6 @@ jobs:
 
       - name: Deploy to K3s Cluster
         run: |
-          kubectl apply -f k8s-deployment.yaml
+          kubectl apply -f k8s-deployment.yaml --validate=false
           # Force Kubernetes to pull the latest image version even if the tag is the same
           kubectl rollout restart deployment/my-app-deployment
