@@ -82,7 +82,7 @@ jobs:
             EOF
 
             # 2. Apply the deployment file locally on the machine
-            sudo kubectl apply -f ~/k8s-deployment.yaml --validate=false
+            sudo kubectl apply -f ~/k8s-deployment.yaml 
             
             # 3. Force Kubernetes to pull the latest image version from JFrog
             sudo kubectl rollout restart deployment/my-app-deployment
