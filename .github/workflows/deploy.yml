@@ -36,7 +36,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # This replaces all the old kubectl setup blocks completely!
       - name: Deploy via SSH directly on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -61,6 +60,9 @@ jobs:
                   labels:
                     app: my-app
                 spec:
+                  # Tells Kubernetes to use the secret we created on the EC2 host
+                  imagePullSecrets:
+                    - name: jfrog-secret
                   containers:
                   - name: my-app-container
                     image: ${{ secrets.JFROG_URL }}/docker-repo-docker/my-app:latest
@@ -81,5 +83,8 @@ jobs:
                   nodePort: 30080
             EOF
 
+            # Apply the manifest layout locally
             sudo kubectl apply -f ~/k8s-deployment.yaml
+            
+            # Force Kubernetes to pull the new image version from JFrog
             sudo kubectl rollout restart deployment/my-app-deployment
