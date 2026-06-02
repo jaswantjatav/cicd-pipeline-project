@@ -11,4 +11,9 @@ export class HomeController {
   getHome(): string {
     return 'Welcome to home page';
   }
+
+  @Get('greet2')
+  greet2(): string {
+    return 'Welcome to second greeting endpoint...';
+  }
 }
