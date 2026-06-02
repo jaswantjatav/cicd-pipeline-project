@@ -1,3 +1,34 @@
+name: CI/CD Pipeline to K3s via JFrog
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to JFrog Artifactory
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.JFROG_URL }}
+          username: ${{ secrets.JFROG_USERNAME }}
+          password: ${{ secrets.JFROG_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.JFROG_URL }}/docker-repo-docker/my-app:latest
+
   deploy-to-k3s:
     runs-on: ubuntu-latest
     needs: build-and-push
@@ -5,53 +36,19 @@
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy via SSH directly on EC2
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Set up Kubectl
+        uses: azure/setup-kubectl@v3
         with:
-          host: ${{ secrets.EC2_PUBLIC_IP }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # 1. Create a deployment file on the EC2 server dynamically
-            cat << 'EOF' > ~/k8s-deployment.yaml
-            apiVersion: apps/v1
-            kind: Deployment
-            metadata:
-              name: my-app-deployment
-              labels:
-                app: my-app
-            spec:
-              replicas: 1
-              selector:
-                matchLabels:
-                  app: my-app
-              template:
-                metadata:
-                  labels:
-                    app: my-app
-                spec:
-                  containers:
-                  - name: my-app-container
-                    image: ${{ secrets.JFROG_URL }}/docker-local/my-app:latest
-                    ports:
-                    - containerPort: 3000
-            ---
-            apiVersion: v1
-            kind: Service
-            metadata:
-              name: my-app-service
-            spec:
-              type: NodePort
-              selector:
-                app: my-app
-              ports:
-                - port: 3000
-                  targetPort: 3000
-                  nodePort: 30080
-            EOF
+          version: 'latest'
 
-            # 2. Apply the deployment file locally on the machine
-            sudo kubectl apply -f ~/k8s-deployment.yaml
-            
-            # 3. Force Kubernetes to pull the latest image version from JFrog
-            sudo kubectl rollout restart deployment/my-app-deployment
+      - name: Configure Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Deploy to K3s Cluster
+        run: |
+          kubectl apply -f k8s-deployment.yaml
+          # Force Kubernetes to pull the latest image version even if the tag is the same
+          kubectl rollout restart deployment/my-app-deployment
