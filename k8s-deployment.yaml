@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: my-app-container
-        image: trialdmzd5x.jfrog.io/artifactory/api/docker/docker-repo-docker-local/my-app:latest
+        image: trialdmzd5x.jfrog.io/docker-repo-docker/my-app:latest
         ports:
         - containerPort: 3000
 ---
